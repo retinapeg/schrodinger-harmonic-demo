@@ -66,7 +66,7 @@ input[type=range] { width: 140px; accent-color: var(--even); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
 .card h2 { margin: 0 0 2px; font-size: 15px; }
 .card .hint { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
-#main { height: 560px; }
+#main { height: 640px; }
 #detail { height: 300px; }
 #resid { height: 150px; }
 #conv { height: 260px; }
@@ -152,9 +152,9 @@ footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
   <section class="bottom">
     <div class="card">
       <h2>Numerical vs analytical energies</h2>
-      <p class="hint">E<sub>exact</sub> = ℏω(n + ½), shown at the current ω. Fidelity is |⟨ψ<sub>num</sub>|ψ<sub>exact</sub>⟩|. Click a row to select that state.</p>
+      <p class="hint">E<sub>exact</sub> = ℏω(n + ½), shown at the current ω. Fidelity is |⟨ψ<sub>num</sub>|ψ<sub>exact</sub>⟩| (1 is a perfect match). Click a row to select that state.</p>
       <table>
-        <thead><tr><th>n</th><th>E<sub>num</sub></th><th>E<sub>exact</sub></th><th>ΔE</th><th>norm</th><th>fidelity</th></tr></thead>
+        <thead><tr><th>n</th><th>E<sub>num</sub></th><th>E<sub>exact</sub></th><th>ΔE</th><th>norm</th><th>1 − fidelity</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -238,7 +238,7 @@ function drawMain() {
   }
   Plotly.react("main", traces, baseLayout({
     xaxis: axis({ range: [-XR, XR], title: { text: "position x" }, zeroline: false }),
-    yaxis: axis({ range: [0, yMax], title: { text: "energy (ħ units)" }, zeroline: false }),
+    yaxis: axis({ range: [0, yMax], title: { text: "energy E" }, zeroline: false }),
     annotations: ann, hovermode: "closest",
   }), { displayModeBar: false, responsive: true });
 }
@@ -276,7 +276,7 @@ function drawDetail() {
     <div>|ΔE|<b>${fmtE(Math.abs(w * (D.E[n] - D.Eexact[n])))}</b></div>
     <div>nodes<b>${nodes}</b></div>
     <div>∫|ψ|² dx<b>${D.norm[n].toFixed(8)}</b></div>
-    <div>fidelity<b>${D.fidelity[n].toFixed(8)}</b></div>`;
+    <div>1 − fidelity<b>${fmtE(1 - D.fidelity[n])}</b></div>`;
 }
 
 function drawTable() {
@@ -288,13 +288,13 @@ function drawTable() {
       <td class="mono">${(w * D.Eexact[n]).toFixed(6)}</td>
       <td class="mono">${(w * (e - D.Eexact[n])).toExponential(2)}</td>
       <td class="mono">${D.norm[n].toFixed(6)}</td>
-      <td class="mono">${D.fidelity[n].toFixed(7)}</td>
+      <td class="mono">${(1 - D.fidelity[n]).toExponential(1)}</td>
     </tr>`).join("");
 }
 
 function drawConv() {
   const c = D.convergence, h = c.map((r) => r.h), e = c.map((r) => r.maxErr);
-  const ref = h.map((x) => e[e.length - 1] * (x / h[h.length - 1]) ** 2);
+  const ref = h.map((x) => 0.3 * e[e.length - 1] * (x / h[h.length - 1]) ** 2);
   Plotly.react("conv", [
     { x: h, y: ref, mode: "lines", line: { color: css("--muted"), dash: "dash", width: 1.5 }, hoverinfo: "skip" },
     { x: h, y: e, mode: "lines+markers", line: { color: css("--even"), width: 2 }, marker: { size: 9, color: css("--even"), line: { color: css("--surface"), width: 2 } },
@@ -302,7 +302,7 @@ function drawConv() {
   ], baseLayout({
     xaxis: axis({ type: "log", title: { text: "grid spacing h" }, exponentformat: "power" }),
     yaxis: axis({ type: "log", title: { text: "max |E_num − E_exact|" }, exponentformat: "power" }),
-    annotations: [{ x: Math.log10(h[1]), y: Math.log10(ref[1]), text: "∝ h²", showarrow: false, yshift: 14, font: { color: css("--muted") } }],
+    annotations: [{ x: Math.log10(h[1]), y: Math.log10(ref[1]), text: "∝ h²", showarrow: false, yshift: -14, font: { color: css("--muted") } }],
   }), { displayModeBar: false, responsive: true });
 }
 
@@ -312,7 +312,7 @@ function drawKpis() {
   const tiles = [
     [`${K}`, `eigenstates solved (N = ${D.params.N} grid points)`],
     [fmtE(maxErr), "max |E_num − E_exact| (ω = 1)"],
-    [minFid.toFixed(6), "worst fidelity |⟨ψ_num|ψ_exact⟩|"],
+    [fmtE(1 - minFid), "worst infidelity 1 − |⟨ψ_num|ψ_exact⟩|"],
     [`${D.params.solveMs} ms`, "LAPACK tridiagonal solve"],
   ];
   $("kpis").innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
@@ -351,6 +351,14 @@ function setTheme(t) {
 $("themeLight").onclick = () => setTheme("light");
 $("themeDark").onclick = () => setTheme("dark");
 try { const t = localStorage.getItem("qho-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+
+// URL presets, e.g. ?theme=light&view=prob&n=5&show=10&omega=1.5
+const q = new URLSearchParams(location.search);
+if (q.get("theme")) document.documentElement.setAttribute("data-theme", q.get("theme"));
+if (q.get("view") === "prob") state.view = "prob";
+if (q.get("show")) { state.nShow = Math.max(1, Math.min(K, +q.get("show"))); $("nShow").value = state.nShow; }
+if (q.get("omega")) { state.omega = Math.max(0.5, Math.min(2, +q.get("omega"))); $("omega").value = state.omega; }
+if (q.get("n")) { state.nSel = Math.max(0, Math.min(K - 1, +q.get("n"))); $("nSel").value = state.nSel; if (state.nSel >= state.nShow) { state.nShow = state.nSel + 1; $("nShow").value = state.nShow; } }
 
 drawKpis(); renderAll(); drawConv();
 $("main").on("plotly_click", (ev) => { const p = ev.points[0]; if (p && p.customdata !== undefined) select(+(Array.isArray(p.customdata) ? p.customdata[0] : p.customdata)); });
