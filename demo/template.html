@@ -188,7 +188,7 @@ const state = { view: "psi", nShow: 8, nSel: 3, omega: 1, exact: true };
 const $ = (id) => document.getElementById(id);
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const colorFor = (n) => css(n % 2 ? "--odd" : "--even");
-const fmtE = (v) => v.toExponential(1).replace("e-", "×10⁻").replace(/⁻0*(\d)/, (m, d) => "⁻" + "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+const fmtE = (v) => v.toExponential(1).replace(/e([+-])(\d+)/, (m, sg, d) => "×10" + (sg === "-" ? "⁻" : "") + [...d].map((c) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c]).join(""));
 function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
 
 // Exact rescaling from ω = 1: x = ξ/√ω, ψ(x) = ω^¼ ψ(ξ), E = ω E(1).

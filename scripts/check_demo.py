@@ -94,6 +94,7 @@ def main():
         "KPI tiles": "eigenstates solved" in out,
         "URL preset n=5 applied": "State n = 5" in out,
         "omega preset applied": ">1.50<" in out,
+        "exponents fully superscripted": not re.search("[⁰¹²³⁴⁵⁶⁷⁸⁹][0-9]", out),
         "no load-error banner": 'id="loadError"' not in out or 'id="loadError" hidden' in out,
     }
     bad = [k for k, ok in checks.items() if not ok]
