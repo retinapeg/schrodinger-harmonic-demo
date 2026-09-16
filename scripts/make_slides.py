@@ -5,6 +5,8 @@
 Needs the optional "assets" dependencies (python-pptx, matplotlib/Pillow) and
 the screenshots in docs/ (scripts/screenshot.sh). All numbers are computed live.
 """
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -53,7 +55,13 @@ def compute_stats():
     for N in (101, 201, 401, 801, 1601, 3201):
         c = solve(k=6, L=10.0, N=N)
         conv.append((c.h, np.abs(c.energies - exact_energies(6)).max()))
-    return dict(k=k, ms=ms, dE=dE, fid=fid, norms=norms, conv=np.array(conv))
+    return dict(k=k, ms=ms, dE=dE, fid=fid, norms=norms, conv=np.array(conv), n_tests=count_tests())
+
+
+def count_tests():
+    out = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q"], cwd=ROOT,
+                         capture_output=True, text=True).stdout
+    return int(re.search(r"(\d+) tests? collected", out).group(1))
 
 
 def make_figures(st):
@@ -271,7 +279,7 @@ def build(st):
     callouts = [
         (BLUE, "Equal spacing", "Levels are ℏω apart and start at ½ℏω, not at zero."),
         (ORANGE, "Parity by colour", "Blue states are even and orange states are odd. State n has n nodes."),
-        (INK2, "Tunnelling tails", "ψ extends past the classical turning points where E = V(x), marked by the ends of each level line."),
+        (INK2, "Beyond the turning points", "ψ leaks into the classically forbidden region where V(x) > E. Each level line ends at a turning point."),
         (INK2, "Exact overlay", "The dotted Hermite functions are indistinguishable from the finite-difference curves."),
     ]
     y = 1.65
@@ -305,11 +313,11 @@ def build(st):
     picture(s, DOCS / "energy-error.png", 6.45, 3.0, w=4.0, border=False)
     text(s, 6.55, 5.35, 4.0, 0.3, "|ΔE| grows with n: finer detail needs a finer grid", size=12, color=MUTED)
     box(s, 10.65, 3.0, 2.05, 4.1)
-    text(s, 10.85, 3.15, 1.75, 0.4, "13 pytest checks", size=15, bold=True)
+    text(s, 10.85, 3.15, 1.75, 0.4, f"{st['n_tests']} pytest checks", size=15, bold=True)
     text(s, 10.85, 3.6, 1.75, 3.4, [
         [(t, {"space": 3})] for t in ["ascending order", "E ≈ n + ½", "spacing = ℏω", "normalisation",
                                       "orthogonality", "parity (−1)ⁿ", "n nodes", "exact ψ match",
-                                      "O(h²) convergence", "small-box failure", "build output"]
+                                      "O(h²) convergence", "ω rescaling", "small-box failure", "build output"]
     ], size=12, color=INK2)
 
     # 6 - architecture
@@ -333,7 +341,7 @@ def build(st):
     text(s, 4.8, 4.5, 3.5, 0.4, "verifies solver and build", size=12, color=MUTED)
     text(s, 8.85, 3.6, 3.85, 0.4, "Controls", size=16, bold=True)
     bullets(s, 8.85, 4.05, 3.85, [
-        "View: ψ or |ψ|²", "States shown (1–12) and selected n", "ω slider (exact rescaling)",
+        "View: ψ or |ψ|²", "States shown (1–12) and selected n", "ω slider (exact scaling law)",
         "Exact-solution overlay", "Click, ↑/↓ keys, URL presets",
     ], size=14, gap=6)
     box(s, 0.6, 5.65, 7.35, 1.25, fill=RGBColor(0x1A, 0x1A, 0x19), line=None)
@@ -360,7 +368,7 @@ def build(st):
         "Finite box with hard walls: high n needs a larger L (tested: a small box pushes the energies up)",
         "O(h²) error grows with n, so fine structure needs finer grids",
         "1D, time-independent, harmonic potential only (the solver accepts any V(x), but only this one is validated)",
-        "The ω slider rescales the ω = 1 solution. This is exact for this potential, but it is not a re-solve",
+        "The ω slider rescales the ω = 1 result. This is identical to re-solving on a grid scaled by 1/√ω (tested)",
     ], size=15, gap=12)
     return prs
 

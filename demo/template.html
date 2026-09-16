@@ -85,6 +85,8 @@ tr.sel td { background: var(--accent-soft); }
 tbody tr { cursor: pointer; }
 .pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .bottom { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 14px; margin-top: 14px; }
+.err { background: var(--surface); border: 1px solid var(--odd); border-left-width: 4px; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: var(--text-2); }
+.err b { color: var(--text); }
 footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
 .stack { display: grid; gap: 14px; align-content: start; }
 @media (max-width: 900px) {
@@ -106,6 +108,8 @@ footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
       <button id="themeLight">Light</button><button id="themeDark">Dark</button>
     </div>
   </header>
+
+  <div class="err" id="loadError" hidden><b>Charts unavailable.</b> Plotly.js could not be loaded from cdn.jsdelivr.net (are you offline?). The numbers below are still live; reconnect and reload to see the plots, or use the screenshots in <code>docs/</code>.</div>
 
   <section class="kpis" id="kpis"></section>
 
@@ -170,6 +174,11 @@ footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
 
 <script>
 const D = /*__DATA__*/null;
+// If the Plotly CDN is unreachable, keep the tables and numbers working and say so.
+if (typeof Plotly === "undefined") {
+  window.Plotly = { react() {} };
+  document.getElementById("loadError").hidden = false;
+}
 const K = D.E.length;
 const XR = 8;          // displayed half-width in x
 const PSI_SCALE = 0.6; // display amplitude, in units of ħω
@@ -361,7 +370,7 @@ if (q.get("omega")) { state.omega = Math.max(0.5, Math.min(2, +q.get("omega")));
 if (q.get("n")) { state.nSel = Math.max(0, Math.min(K - 1, +q.get("n"))); $("nSel").value = state.nSel; if (state.nSel >= state.nShow) { state.nShow = state.nSel + 1; $("nShow").value = state.nShow; } }
 
 drawKpis(); renderAll(); drawConv();
-$("main").on("plotly_click", (ev) => { const p = ev.points[0]; if (p && p.customdata !== undefined) select(+(Array.isArray(p.customdata) ? p.customdata[0] : p.customdata)); });
+if ($("main").on) $("main").on("plotly_click", (ev) => { const p = ev.points[0]; if (p && p.customdata !== undefined) select(+(Array.isArray(p.customdata) ? p.customdata[0] : p.customdata)); });
 </script>
 </body>
 </html>
