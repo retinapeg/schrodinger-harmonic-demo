@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantum Harmonic Oscillator</title>
+<meta name="description" content="Finite-difference solution of the 1D Schrödinger equation for the quantum harmonic oscillator, compared with the exact result.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --surface: #fcfcfb;
+  --border: #e3e2dc;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #8a8984;
+  --grid: #ecebe6;
+  --even: #2a78d6;
+  --odd: #eb6834;
+  --potential: #7d7c76;
+  --exact: #0b0b0b;
+  --accent-soft: rgba(42,120,214,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --border: #2d2d2b;
+    --text: #ffffff; --text-2: #c3c2b7; --muted: #8c8b84; --grid: #262624;
+    --even: #3987e5; --odd: #d95926; --potential: #a3a29a; --exact: #ffffff;
+    --accent-soft: rgba(57,135,229,.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --border: #2d2d2b;
+  --text: #ffffff; --text-2: #c3c2b7; --muted: #8c8b84; --grid: #262624;
+  --even: #3987e5; --odd: #d95926; --potential: #a3a29a; --exact: #ffffff;
+  --accent-soft: rgba(57,135,229,.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, sans-serif; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 24px 16px 40px; }
+header { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+.sub { color: var(--text-2); margin-top: 4px; }
+.sub code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
+.eq { font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--text-2); font-size: 13px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.kpi .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi .l { color: var(--text-2); font-size: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 18px 26px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; }
+.ctl { display: flex; align-items: center; gap: 10px; }
+.ctl label { color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+.ctl output { font-family: "JetBrains Mono", monospace; font-size: 13px; min-width: 3.2em; }
+input[type=range] { width: 140px; accent-color: var(--even); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; color: var(--text-2); padding: 6px 12px; font: inherit; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed=true] { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.chk { display: flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 12.5px; cursor: pointer; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.card h2 { margin: 0 0 2px; font-size: 15px; }
+.card .hint { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+#main { height: 560px; }
+#detail { height: 300px; }
+#resid { height: 150px; }
+#conv { height: 260px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.sw.dot { background: none; border-top: 2px dotted var(--exact); height: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px; margin: 6px 0 4px; }
+.facts div { font-size: 12px; color: var(--text-2); }
+.facts b { display: block; color: var(--text); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", monospace; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); }
+th { color: var(--text-2); font-weight: 500; font-size: 12px; }
+td:first-child, th:first-child { text-align: left; }
+td.mono { font-size: 12.5px; }
+tr.sel td { background: var(--accent-soft); }
+tbody tr { cursor: pointer; }
+.pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.bottom { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 14px; margin-top: 14px; }
+footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
+.stack { display: grid; gap: 14px; align-content: start; }
+@media (max-width: 900px) {
+  .grid, .bottom { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  #main { height: 460px; }
+  input[type=range] { width: 110px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Quantum Harmonic Oscillator</h1>
+      <div class="sub">Solving <span class="eq">Ĥψ = Eψ</span> with <span class="eq">V(x) = ½mω²x²</span> numerically, then checking the answer against the exact solution. Units: ℏ = m = 1.</div>
+    </div>
+    <div class="seg" role="group" aria-label="Theme">
+      <button id="themeLight">Light</button><button id="themeDark">Dark</button>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="controls">
+    <div class="ctl"><label>View</label>
+      <div class="seg" role="group" aria-label="View">
+        <button data-view="psi" aria-pressed="true">Wavefunction ψ</button>
+        <button data-view="prob" aria-pressed="false">Probability |ψ|²</button>
+      </div>
+    </div>
+    <div class="ctl"><label for="nShow">States shown</label><input id="nShow" type="range" min="1" max="12" value="8"><output id="nShowOut"></output></div>
+    <div class="ctl"><label for="nSel">Selected n</label><input id="nSel" type="range" min="0" max="11" value="3"><output id="nSelOut"></output></div>
+    <div class="ctl"><label for="omega">Frequency ω</label><input id="omega" type="range" min="0.5" max="2" step="0.05" value="1"><output id="omegaOut"></output></div>
+    <label class="chk"><input id="exactToggle" type="checkbox" checked> Overlay exact solution</label>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Energy levels and eigenstates in the harmonic well</h2>
+      <p class="hint">Each state is drawn at the height of its energy E<sub>n</sub>. Its level line spans the classically allowed region. Amplitudes are scaled for display. Click a state to select it; ↑/↓ also work.</p>
+      <div id="main"></div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--potential)"></span>V(x)</span>
+        <span><span class="sw" style="background:var(--even)"></span>even n (symmetric)</span>
+        <span><span class="sw" style="background:var(--odd)"></span>odd n (antisymmetric)</span>
+        <span><span class="sw dot"></span>exact (Hermite functions)</span>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h2 id="detailTitle">State n = 3</h2>
+        <p class="hint">True scale. The line is the finite-difference result and the dots are the exact result. Shading shows |ψ|², and the dashed lines mark the classical turning points.</p>
+        <div class="facts" id="facts"></div>
+        <div id="detail"></div>
+      </div>
+      <div class="card">
+        <h2>Residual ψ<sub>num</sub> − ψ<sub>exact</sub></h2>
+        <p class="hint">The pointwise error for the selected state. It is very small; note the axis scale.</p>
+        <div id="resid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bottom">
+    <div class="card">
+      <h2>Numerical vs analytical energies</h2>
+      <p class="hint">E<sub>exact</sub> = ℏω(n + ½), shown at the current ω. Fidelity is |⟨ψ<sub>num</sub>|ψ<sub>exact</sub>⟩|. Click a row to select that state.</p>
+      <table>
+        <thead><tr><th>n</th><th>E<sub>num</sub></th><th>E<sub>exact</sub></th><th>ΔE</th><th>norm</th><th>fidelity</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Convergence: second order in h</h2>
+      <p class="hint">Max |ΔE| over n = 0–5 against grid spacing. The dashed line is the ideal h² slope.</p>
+      <div id="conv"></div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const K = D.E.length;
+const XR = 8;          // displayed half-width in x
+const PSI_SCALE = 0.6; // display amplitude, in units of ħω
+const PROB_SCALE = 1.2;
+
+const state = { view: "psi", nShow: 8, nSel: 3, omega: 1, exact: true };
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const colorFor = (n) => css(n % 2 ? "--odd" : "--even");
+const fmtE = (v) => v.toExponential(1).replace("e-", "×10⁻").replace(/⁻0*(\d)/, (m, d) => "⁻" + "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+
+// Exact rescaling from ω = 1: x = ξ/√ω, ψ(x) = ω^¼ ψ(ξ), E = ω E(1).
+function scaled(n, which) {
+  const w = state.omega, s = Math.sqrt(w), a = Math.pow(w, 0.25);
+  const src = which === "exact" ? D.psiExact[n] : D.psi[n];
+  const xs = [], ys = [];
+  for (let i = 0; i < D.x.length; i++) {
+    const x = D.x[i] / s;
+    if (Math.abs(x) <= XR + 0.05) { xs.push(x); ys.push(a * src[i]); }
+  }
+  return { xs, ys };
+}
+function baseLayout(extra) {
+  return Object.assign({
+    paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "Inter, system-ui, sans-serif", color: css("--text-2"), size: 12 },
+    margin: { l: 52, r: 16, t: 8, b: 40 }, showlegend: false,
+    hoverlabel: { bgcolor: css("--surface"), bordercolor: css("--border"), font: { color: css("--text"), family: "JetBrains Mono, monospace", size: 12 } },
+  }, extra);
+}
+const axis = (o) => Object.assign({ gridcolor: css("--grid"), zerolinecolor: css("--grid"), linecolor: css("--border"), tickcolor: css("--border"), ticks: "outside", ticklen: 4 }, o);
+
+function drawMain() {
+  const w = state.omega, traces = [];
+  const yMax = Math.min(13.5, w * (state.nShow + 0.3));
+  const vx = [], vy = [];
+  for (let i = 0; i <= 400; i++) { const x = -XR + (2 * XR * i) / 400; vx.push(x); vy.push(0.5 * w * w * x * x); }
+  traces.push({ x: vx, y: vy, mode: "lines", line: { color: css("--potential"), width: 2.5 }, hovertemplate: "V(x) = %{y:.2f}<extra></extra>" });
+
+  for (let n = 0; n < state.nShow; n++) {
+    const E = w * D.E[n], sel = n === state.nSel, col = colorFor(n);
+    const op = sel ? 1 : 0.45;
+    const xt = Math.sqrt(2 * E) / w; // classical turning point
+    traces.push({ x: [-xt, xt], y: [E, E], mode: "lines", line: { color: css("--text-2"), width: sel ? 1.6 : 1 }, opacity: sel ? 0.9 : 0.5,
+      customdata: [n, n], hovertemplate: `E<sub>${n}</sub> = ${E.toFixed(5)} (exact ${(w * D.Eexact[n]).toFixed(5)})<extra></extra>` });
+    const { xs, ys } = scaled(n, "num");
+    const amp = state.view === "psi" ? PSI_SCALE * w / Math.pow(w, 0.25) : PROB_SCALE * w / Math.sqrt(w);
+    const f = state.view === "psi" ? (v) => E + amp * v : (v) => E + amp * v * v;
+    traces.push({ x: xs, y: xs.map(() => E), mode: "lines", line: { width: 0 }, hoverinfo: "skip" });
+    traces.push({ x: xs, y: ys.map(f), mode: "lines", fill: "tonexty", fillcolor: hexA(col, sel ? 0.22 : 0.08),
+      line: { color: col, width: sel ? 2.6 : 1.6 }, opacity: op, customdata: xs.map(() => n),
+      hovertemplate: `n = ${n}<br>x = %{x:.2f}<extra></extra>` });
+    if (state.exact) {
+      const ex = scaled(n, "exact");
+      const step = 5, ex2 = { xs: [], ys: [] };
+      ex.xs.forEach((x, i) => { if (i % step === 0) { ex2.xs.push(x); ex2.ys.push(f(ex.ys[i]) - E + w * D.Eexact[n]); } });
+      traces.push({ x: ex2.xs, y: ex2.ys, mode: "lines", line: { color: css("--exact"), width: 1.2, dash: "dot" }, opacity: sel ? 0.9 : 0.5, hoverinfo: "skip" });
+    }
+  }
+  const ann = [];
+  for (let n = 0; n < state.nShow; n++) {
+    const E = w * D.E[n];
+    if (E < yMax) ann.push({ x: XR, y: E, xanchor: "right", yanchor: "bottom", showarrow: false, text: `n=${n}`,
+      font: { size: 11, color: n === state.nSel ? css("--text") : css("--muted"), family: "JetBrains Mono, monospace" } });
+  }
+  Plotly.react("main", traces, baseLayout({
+    xaxis: axis({ range: [-XR, XR], title: { text: "position x" }, zeroline: false }),
+    yaxis: axis({ range: [0, yMax], title: { text: "energy (ħ units)" }, zeroline: false }),
+    annotations: ann, hovermode: "closest",
+  }), { displayModeBar: false, responsive: true });
+}
+
+function drawDetail() {
+  const n = state.nSel, w = state.omega, col = colorFor(n);
+  const num = scaled(n, "num"), ex = scaled(n, "exact");
+  const xt = Math.sqrt(2 * w * D.E[n]) / w;
+  const exSparse = { xs: [], ys: [] };
+  ex.xs.forEach((x, i) => { if (i % 6 === 0) { exSparse.xs.push(x); exSparse.ys.push(ex.ys[i]); } });
+  const lim = Math.min(XR, xt + 3 / Math.sqrt(w));
+  const peak = Math.max(...num.ys.map(Math.abs));
+  Plotly.react("detail", [
+    { x: num.xs, y: num.ys.map((v) => v * v), mode: "lines", line: { width: 0 }, fill: "tozeroy", fillcolor: hexA(col, 0.18), hovertemplate: "|ψ|² = %{y:.4f}<extra></extra>" },
+    { x: num.xs, y: num.ys, mode: "lines", line: { color: col, width: 2.5 }, hovertemplate: "ψ<sub>num</sub>(%{x:.2f}) = %{y:.5f}<extra></extra>" },
+    { x: exSparse.xs, y: exSparse.ys, mode: "markers", marker: { color: css("--surface"), size: 6, line: { color: css("--exact"), width: 1.4 } }, hovertemplate: "ψ<sub>exact</sub>(%{x:.2f}) = %{y:.5f}<extra></extra>" },
+  ], baseLayout({
+    xaxis: axis({ range: [-lim, lim], title: { text: "x" }, zeroline: false }),
+    yaxis: axis({ range: [-peak * 1.15, peak * 1.15], title: { text: "ψ(x)" } }),
+    shapes: [-xt, xt].map((x) => ({ type: "line", x0: x, x1: x, yref: "paper", y0: 0, y1: 1, line: { color: css("--muted"), width: 1, dash: "dash" } })),
+    hovermode: "x unified",
+  }), { displayModeBar: false, responsive: true });
+
+  const rx = [], ry = [];
+  num.xs.forEach((x, i) => { if (Math.abs(x) <= lim) { rx.push(x); ry.push(num.ys[i] - ex.ys[i]); } });
+  Plotly.react("resid", [{ x: rx, y: ry, mode: "lines", line: { color: col, width: 2 }, hovertemplate: "Δψ = %{y:.2e}<extra></extra>" }],
+    baseLayout({ margin: { l: 64, r: 16, t: 4, b: 30 }, xaxis: axis({ range: [-lim, lim], zeroline: false }), yaxis: axis({ exponentformat: "power", zeroline: true, zerolinecolor: css("--border") }) }),
+    { displayModeBar: false, responsive: true });
+
+  const nodes = n, parity = n % 2 ? "odd" : "even";
+  $("detailTitle").innerHTML = `State n = ${n} <span style="color:${col};font-weight:500">· ${parity} parity</span>`;
+  $("facts").innerHTML = `
+    <div>E<sub>num</sub><b>${(w * D.E[n]).toFixed(6)}</b></div>
+    <div>E<sub>exact</sub> = ω(n+½)<b>${(w * D.Eexact[n]).toFixed(6)}</b></div>
+    <div>|ΔE|<b>${fmtE(Math.abs(w * (D.E[n] - D.Eexact[n])))}</b></div>
+    <div>nodes<b>${nodes}</b></div>
+    <div>∫|ψ|² dx<b>${D.norm[n].toFixed(8)}</b></div>
+    <div>fidelity<b>${D.fidelity[n].toFixed(8)}</b></div>`;
+}
+
+function drawTable() {
+  const w = state.omega;
+  $("tbody").innerHTML = D.E.map((e, n) => `
+    <tr data-n="${n}" class="${n === state.nSel ? "sel" : ""}">
+      <td><span class="pill" style="background:${colorFor(n)}"></span>${n}</td>
+      <td class="mono">${(w * e).toFixed(6)}</td>
+      <td class="mono">${(w * D.Eexact[n]).toFixed(6)}</td>
+      <td class="mono">${(w * (e - D.Eexact[n])).toExponential(2)}</td>
+      <td class="mono">${D.norm[n].toFixed(6)}</td>
+      <td class="mono">${D.fidelity[n].toFixed(7)}</td>
+    </tr>`).join("");
+}
+
+function drawConv() {
+  const c = D.convergence, h = c.map((r) => r.h), e = c.map((r) => r.maxErr);
+  const ref = h.map((x) => e[e.length - 1] * (x / h[h.length - 1]) ** 2);
+  Plotly.react("conv", [
+    { x: h, y: ref, mode: "lines", line: { color: css("--muted"), dash: "dash", width: 1.5 }, hoverinfo: "skip" },
+    { x: h, y: e, mode: "lines+markers", line: { color: css("--even"), width: 2 }, marker: { size: 9, color: css("--even"), line: { color: css("--surface"), width: 2 } },
+      customdata: c.map((r) => r.N), hovertemplate: "N = %{customdata}<br>h = %{x:.4f}<br>max |ΔE| = %{y:.2e}<extra></extra>" },
+  ], baseLayout({
+    xaxis: axis({ type: "log", title: { text: "grid spacing h" }, exponentformat: "power" }),
+    yaxis: axis({ type: "log", title: { text: "max |E_num − E_exact|" }, exponentformat: "power" }),
+    annotations: [{ x: Math.log10(h[1]), y: Math.log10(ref[1]), text: "∝ h²", showarrow: false, yshift: 14, font: { color: css("--muted") } }],
+  }), { displayModeBar: false, responsive: true });
+}
+
+function drawKpis() {
+  const maxErr = Math.max(...D.E.map((e, n) => Math.abs(e - D.Eexact[n])));
+  const minFid = Math.min(...D.fidelity);
+  const tiles = [
+    [`${K}`, `eigenstates solved (N = ${D.params.N} grid points)`],
+    [fmtE(maxErr), "max |E_num − E_exact| (ω = 1)"],
+    [minFid.toFixed(6), "worst fidelity |⟨ψ_num|ψ_exact⟩|"],
+    [`${D.params.solveMs} ms`, "LAPACK tridiagonal solve"],
+  ];
+  $("kpis").innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  $("foot").innerHTML = `Method: second-order central finite differences on x ∈ [−${D.params.L}, ${D.params.L}], h = ${D.params.h.toFixed(3)}, hard-wall boundaries, scipy.linalg.eigh_tridiagonal. The data was computed at ω = 1 and rescaled exactly with E ∝ ω and ψ(x) = ω<sup>¼</sup>ψ(√ω x).`;
+}
+
+function renderAll() {
+  $("nShowOut").textContent = state.nShow;
+  $("nSelOut").textContent = state.nSel;
+  $("omegaOut").textContent = state.omega.toFixed(2);
+  document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === state.view));
+  drawMain(); drawDetail(); drawTable();
+}
+function select(n) {
+  state.nSel = Math.max(0, Math.min(K - 1, n));
+  if (state.nSel >= state.nShow) { state.nShow = state.nSel + 1; $("nShow").value = state.nShow; }
+  $("nSel").value = state.nSel;
+  renderAll();
+}
+
+$("nShow").addEventListener("input", (e) => { state.nShow = +e.target.value; if (state.nSel >= state.nShow) { state.nSel = state.nShow - 1; $("nSel").value = state.nSel; } renderAll(); });
+$("nSel").addEventListener("input", (e) => select(+e.target.value));
+$("omega").addEventListener("input", (e) => { state.omega = +e.target.value; renderAll(); });
+$("exactToggle").addEventListener("change", (e) => { state.exact = e.target.checked; drawMain(); });
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { state.view = b.dataset.view; renderAll(); }));
+$("tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (tr) select(+tr.dataset.n); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowUp") { e.preventDefault(); select(state.nSel + 1); }
+  if (e.key === "ArrowDown") { e.preventDefault(); select(state.nSel - 1); }
+});
+function setTheme(t) {
+  try { localStorage.setItem("qho-theme", t); } catch (e) {}
+  document.documentElement.setAttribute("data-theme", t);
+  drawKpis(); renderAll(); drawConv();
+}
+$("themeLight").onclick = () => setTheme("light");
+$("themeDark").onclick = () => setTheme("dark");
+try { const t = localStorage.getItem("qho-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+
+drawKpis(); renderAll(); drawConv();
+$("main").on("plotly_click", (ev) => { const p = ev.points[0]; if (p && p.customdata !== undefined) select(+(Array.isArray(p.customdata) ? p.customdata[0] : p.customdata)); });
+</script>
+</body>
+</html>
