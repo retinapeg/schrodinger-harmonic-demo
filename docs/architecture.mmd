@@ -2,12 +2,12 @@
 %% Sources: qho/__init__.py, qho/analytic.py, qho/solver.py, qho/build.py, demo/template.html, tests/test_solver.py, tests/test_scaling.py, tests/test_build.py, scripts/check_demo.py, scripts/make_slides.py
 %% Render: npx @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/images/architecture.svg -b white
 flowchart TD
+    TPL[("demo/template.html")]
     subgraph PY["Build step: python -m qho.build"]
         AN["qho/analytic.py<br/>exact E_n = n + 1/2,<br/>Hermite functions"]
         SO["qho/solver.py<br/>tridiagonal H on grid,<br/>SciPy eigh_tridiagonal"]
         BU["qho/build.py<br/>solve 12 states, N = 2401,<br/>compare + convergence"]
     end
-    TPL[("demo/template.html")]
     IDX[("demo/index.html<br/>page + embedded JSON")]
     BR["Browser page JS<br/>Plotly charts, table,<br/>exact ω rescaling"]
     USER["User<br/>view, n, ω sliders,<br/>URL presets"]
@@ -16,10 +16,10 @@ flowchart TD
     CHK["scripts/check_demo.py<br/>fresh solve vs page,<br/>headless Chrome render"]
     SL["scripts/make_slides.py<br/>optional: deck,<br/>docs/*.png figures"]
 
+    TPL --> BU
     AN -->|sign reference| SO
     AN -->|exact values| BU
     SO -->|eigenpairs| BU
-    TPL --> BU
     TST -.->|asserts| PY
     BU -->|writes| IDX
     SO -.->|"solve()"| SL
