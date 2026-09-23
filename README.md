@@ -14,6 +14,32 @@ an interactive single-page demo.
 | normalisation error | < 10⁻¹⁵ |
 | error drop per halving of h | × 4.0 (second order) |
 
+![Log-log plot of the maximum energy error for n = 0 to 5 against grid spacing h. The error falls from about 8e-2 at h = 0.2 to 7e-5 at h = 0.00625, parallel to the ideal h-squared line](docs/convergence.png)
+
+*Convergence study: max |E_num − E_exact| for n = 0–5 against grid spacing h, plotted by `scripts/make_slides.py` from a real solve on the same grids as `qho.build.convergence()` (not synthetic data).*
+
+## System architecture
+
+![Architecture diagram: qho/analytic.py and qho/solver.py feed qho/build.py, which fills demo/template.html and writes demo/index.html. The browser page renders it with Plotly from a CDN under user controls. pytest and scripts/check_demo.py verify the build](docs/images/architecture.svg)
+
+*Purple: model call · blue: deterministic code · green: human · amber: evaluation · grey: storage · dashed: external, optional, mocked or planned*
+
+`python -m qho.build` calls `qho.solver.solve()` for the 12 lowest states on a
+2401-point grid, compares them with the closed-form results from `qho.analytic`,
+runs the convergence study and embeds everything as JSON in `demo/template.html`
+to write `demo/index.html`. The page is opened straight from disk, and its
+JavaScript draws the charts and table from the embedded data and rescales the
+ω = 1 solution for the ω slider, so the browser never re-solves. Plotly.js and
+fonts come from a CDN; without it the numbers still render ([fallback.md](fallback.md)).
+`tests/` and `scripts/check_demo.py` check the physics and that the page matches
+a fresh solve; the numerical steps are in [How it works](#how-it-works).
+
+## Does it use AI at runtime?
+
+No. There is no model, LLM or learned component: the energies and wavefunctions
+come from a LAPACK tridiagonal eigensolver (`scipy.linalg.eigh_tridiagonal`) and
+closed-form Hermite functions, and the browser only rescales and plots those numbers.
+
 ## Quick start
 
 Requires Python ≥ 3.10. Units are ℏ = m = 1 (and ω = 1 in the solver).

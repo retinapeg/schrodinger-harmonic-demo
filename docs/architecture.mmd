@@ -1,0 +1,43 @@
+%% Architecture of schrodinger-harmonic-demo at commit 727c13c70384a028fb1e097defec5ded770648fc
+%% Sources: qho/__init__.py, qho/analytic.py, qho/solver.py, qho/build.py, demo/template.html, tests/test_solver.py, tests/test_scaling.py, tests/test_build.py, scripts/check_demo.py, scripts/make_slides.py
+%% Render: npx @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/images/architecture.svg -b white
+flowchart TD
+    TPL[("demo/template.html")]
+    subgraph PY["Build step: python -m qho.build"]
+        AN["qho/analytic.py<br/>exact E_n = n + 1/2,<br/>Hermite functions"]
+        SO["qho/solver.py<br/>tridiagonal H on grid,<br/>SciPy eigh_tridiagonal"]
+        BU["qho/build.py<br/>solve 12 states, N = 2401,<br/>compare + convergence"]
+    end
+    IDX[("demo/index.html<br/>page + embedded JSON")]
+    BR["Browser page JS<br/>Plotly charts, table,<br/>exact ω rescaling"]
+    USER["User<br/>view, n, ω sliders,<br/>URL presets"]
+    CDN["Plotly.js + fonts CDN<br/>offline: numbers only"]
+    TST["tests/ pytest, 18 tests<br/>physics, scaling, build"]
+    CHK["scripts/check_demo.py<br/>fresh solve vs page,<br/>headless Chrome render"]
+    SL["scripts/make_slides.py<br/>optional: deck,<br/>docs/*.png figures"]
+
+    TPL --> BU
+    AN -->|sign reference| SO
+    AN -->|exact values| BU
+    SO -->|eigenpairs| BU
+    TST -.->|asserts| PY
+    BU -->|writes| IDX
+    SO -.->|"solve()"| SL
+    IDX -->|opened as file| BR
+    CDN -.-> BR
+    USER --> BR
+    CHK -.->|rebuilds + compares| IDX
+
+    class AN,SO,BU,BR det;
+    class TPL,IDX store;
+    class USER human;
+    class TST,CHK eval;
+    class CDN,SL ext;
+
+    classDef ai fill:#efe7fb,stroke:#6a4c93,stroke-width:2px,color:#2b1d45;
+    classDef det fill:#eef3f8,stroke:#2f5d8a,stroke-width:1.5px,color:#172c37;
+    classDef human fill:#e8f0ec,stroke:#285b48,stroke-width:1.5px,color:#173f32;
+    classDef eval fill:#f7efdf,stroke:#8b6330,stroke-width:1.5px,color:#4a3413;
+    classDef store fill:#f3f4f1,stroke:#65757b,stroke-width:1.5px,color:#172c37;
+    classDef ext fill:#ffffff,stroke:#2f5d8a,stroke-width:1.5px,stroke-dasharray:4 3,color:#172c37;
+    classDef mock fill:#ffffff,stroke:#9aa5a8,stroke-width:1.5px,stroke-dasharray:6 4,color:#65757b;
