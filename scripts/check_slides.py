@@ -1,4 +1,4 @@
-"""Breaker check for the slide deck (no Keynote or PowerPoint needed).
+"""Verification check for the slide deck (no Keynote or PowerPoint needed).
 
     python scripts/check_slides.py
 

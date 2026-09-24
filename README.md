@@ -65,7 +65,7 @@ See [fallback.md](fallback.md).
 - **Overlay exact solution:** draws the dotted Hermite functions over the numerical curves.
 - **URL presets:** for example `demo/index.html?theme=dark&view=prob&n=5&show=10&omega=1.5`.
 
-### Optional: slides, figures and Breaker checks
+### Optional: slides, figures and verification checks
 
 ```bash
 .venv/bin/pip install matplotlib python-pptx       # "assets" extra
@@ -95,7 +95,7 @@ appear. It also simulates a CDN outage to confirm the fallback banner. Set
 | `qho/analytic.py` | exact E_n and Hermite functions (stable recurrence) |
 | `qho/build.py` | solve, compare, convergence study, embed JSON in `demo/template.html` |
 | `tests/` | normalisation, orthogonality, parity, node count, exact match, O(h²), ω scaling, small box, build |
-| `scripts/` | slide deck, screenshots, Breaker checks |
+| `scripts/` | slide deck, screenshots, verification checks |
 | `slides/qho-demo.pptx` | 7-slide deck, generated; opens in PowerPoint or Keynote |
 
 **Why the ω slider is exact:** on a grid scaled by 1/√ω, the finite-difference

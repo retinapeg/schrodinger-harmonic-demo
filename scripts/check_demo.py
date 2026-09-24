@@ -1,4 +1,4 @@
-"""Breaker check for the demo page.
+"""Verification check for the demo page.
 
     python scripts/check_demo.py
 
